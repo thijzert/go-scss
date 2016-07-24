@@ -38,18 +38,37 @@ func (t *TokenRing) Rewind() {
 	t.index--
 }
 
-func (t *TokenRing) NRewind(i int) {
-	t.index -= i
+// Advance the stream until we find a node that isn't one of the listed types to ignore
+func (t *TokenRing) Ignore(types ...lexer.TokenType) *lexer.Token {
+	rv := t.Next()
+	for rv != nil {
+		ignored := false
+		for _, t := range types {
+			if rv.Type == t {
+				ignored = true
+			}
+		}
+		if !ignored {
+			return rv
+		}
+
+		rv = t.Next()
+	}
+
+	return rv
 }
 
+// Mark a position in the stream for later use
 func (t *TokenRing) Mark() {
 	t.bts.push(t.index)
 }
 
+// Return to the last marked location
 func (t *TokenRing) Backtrack() {
 	t.index = t.bts.pop()
 }
 
+// Remove the last made mark
 func (t *TokenRing) Unmark() {
 	t.bts.pop()
 }

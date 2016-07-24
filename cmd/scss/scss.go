@@ -13,7 +13,7 @@ func main() {
 		.bar
 		{
 			color: lime;
-		)
+		}
 	}`
 
 	parsed, err := scss.Parse(src)

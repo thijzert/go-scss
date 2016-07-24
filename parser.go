@@ -67,10 +67,8 @@ func Parse(src string) (rv IR, err error) {
 func parseIR(tok *TokenRing) (rv IR, err error) {
 	tok.Mark()
 	rv.Rules = make([]Rule, 0)
-	peek := tok.Next()
-	for peek != nil && peek.Type == WhitespaceToken {
-		peek = tok.Next()
-	}
+
+	peek := tok.Ignore(WhitespaceToken)
 	tok.Rewind()
 
 	var rule Rule
@@ -98,10 +96,7 @@ func parseIR(tok *TokenRing) (rv IR, err error) {
 
 		rv.Rules = append(rv.Rules, rule)
 
-		peek = tok.Next()
-		for peek != nil && peek.Type == WhitespaceToken {
-			peek = tok.Next()
-		}
+		peek = tok.Ignore(WhitespaceToken)
 		if peek != nil {
 			tok.Rewind()
 		}
@@ -132,10 +127,7 @@ func parseRule(tok *TokenRing) (rv Rule, err error) {
 
 func parseSelector(tok *TokenRing) (rv Selector, err error) {
 	tok.Mark()
-	c := tok.Next()
-	for c != nil && c.Type == WhitespaceToken {
-		c = tok.Next()
-	}
+	c := tok.Ignore(WhitespaceToken)
 	for c != nil {
 		if c.Type == OperatorToken && c.Value == "{" {
 			tok.Rewind()
@@ -189,10 +181,7 @@ func parseScope(tok *TokenRing) (rv Scope, err error) {
 			}
 			rv.Subrules = append(rv.Subrules, rule)
 		}
-		peek = tok.Next()
-		for peek != nil && peek.Type == WhitespaceToken {
-			peek = tok.Next()
-		}
+		peek = tok.Ignore(WhitespaceToken)
 		if peek != nil {
 			tok.Rewind()
 		}
@@ -212,10 +201,7 @@ func parseScope(tok *TokenRing) (rv Scope, err error) {
 func parseProperty(tok *TokenRing) (rv Property, err error) {
 	tok.Mark()
 
-	peek := tok.Next()
-	for peek != nil && peek.Type == WhitespaceToken {
-		peek = tok.Next()
-	}
+	peek := tok.Ignore(WhitespaceToken)
 	if peek == nil {
 		err = parseError("unexpected EOF", nil, peek)
 		tok.Backtrack()
@@ -229,10 +215,7 @@ func parseProperty(tok *TokenRing) (rv Property, err error) {
 
 	rv.Key = peek.Value
 
-	peek = tok.Next()
-	for peek != nil && peek.Type == WhitespaceToken {
-		peek = tok.Next()
-	}
+	peek = tok.Ignore(WhitespaceToken)
 	if peek == nil {
 		err = parseError("unexpected EOF", nil, peek)
 		tok.Backtrack()
