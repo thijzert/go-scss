@@ -43,13 +43,15 @@ const (
 )
 
 type Token struct {
-	Type  TokenType
-	Value string
+	Type         TokenType
+	Value        string
+	Line, Column int
 }
 
 type L struct {
 	source          string
 	start, position int
+	line, column    int
 	startState      StateFunc
 	Err             error
 	tokens          chan Token
@@ -64,6 +66,8 @@ func New(src string, start StateFunc) *L {
 		startState: start,
 		start:      0,
 		position:   0,
+		line:       1,
+		column:     0,
 		rewind:     newRuneStack(),
 	}
 }
@@ -98,8 +102,10 @@ func (l *L) Current() string {
 // value into the tokens channel.
 func (l *L) Emit(t TokenType) {
 	tok := Token{
-		Type:  t,
-		Value: l.Current(),
+		Type:   t,
+		Value:  l.Current(),
+		Line:   l.line,
+		Column: l.column,
 	}
 	l.tokens <- tok
 	l.start = l.position
@@ -127,13 +133,15 @@ func (l *L) Peek() rune {
 // occur more than once per call to Next but you can never rewind past the
 // last point a token was emitted.
 func (l *L) Rewind() {
-	r := l.rewind.pop()
+	r, ln, cl := l.rewind.pop()
 	if r > EOFRune {
 		size := utf8.RuneLen(r)
 		l.position -= size
 		if l.position < l.start {
 			l.position = l.start
 		}
+		l.line = ln
+		l.column = cl
 	}
 }
 
@@ -151,7 +159,13 @@ func (l *L) Next() rune {
 		r, s = utf8.DecodeRuneInString(str)
 	}
 	l.position += s
-	l.rewind.push(r)
+	l.rewind.push(r, l.line, l.column)
+	if r == '\n' {
+		l.line++
+		l.column = 0
+	} else {
+		l.column++
+	}
 
 	return r
 }

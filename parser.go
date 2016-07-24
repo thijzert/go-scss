@@ -1,14 +1,16 @@
 package scss
 
 import (
+	"fmt"
 	_ "github.com/pkg/errors"
 	"github.com/thijzert/go-scss/lexer"
 	"strings"
 )
 
 type ParseError struct {
-	Message  string
-	Previous error
+	Message   string
+	Previous  error
+	LastToken *lexer.Token
 }
 
 func (p ParseError) Error() string {
@@ -19,19 +21,23 @@ func (p ParseError) Cause() error {
 	return p.Previous
 }
 
-func parseError(err string, cause error) error {
-	return ParseError{err, cause}
+func parseError(err string, cause error, lastToken *lexer.Token) error {
+	return ParseError{err, cause, lastToken}
 }
 
 func (p ParseError) String() string {
+	rv := p.Message
+	if p.LastToken != nil {
+		rv = fmt.Sprintf("%s -- at line %d c %d", p.Message, p.LastToken.Line, p.LastToken.Column)
+	}
 	if p.Previous != nil {
 		if perr, ok := p.Previous.(ParseError); ok {
-			return p.Message + "\n\t" + strings.Replace(perr.String(), "\n", "\n\t", -1)
+			return rv + "\n\t" + strings.Replace(perr.String(), "\n", "\n\t", -1)
 		} else {
-			return p.Message + "\n\t" + strings.Replace(p.Previous.Error(), "\n", "\n\t", -1)
+			return rv + "\n\t" + strings.Replace(p.Previous.Error(), "\n", "\n\t", -1)
 		}
 	}
-	return p.Message
+	return rv
 }
 
 type Selector []*lexer.Token
@@ -71,10 +77,10 @@ func parseIR(tok *TokenRing) (rv IR, err error) {
 		if peek.Type == OperatorToken && (peek.Value == "@" || peek.Value == "$") {
 			// TODO: handle @import, $macro, @mixin...
 			if peek.Value == "@" {
-				err = parseError("@-directives are not implemented", nil)
+				err = parseError("@-directives are not implemented", nil, peek)
 				return
 			} else if peek.Value == "$" {
-				err = parseError("Macros are not implemented", nil)
+				err = parseError("Macros are not implemented", nil, peek)
 				return
 			}
 		}
@@ -82,7 +88,7 @@ func parseIR(tok *TokenRing) (rv IR, err error) {
 		rule, err = parseRule(tok)
 
 		if err != nil {
-			err = parseError("Error parsing rule", err)
+			err = parseError("Error parsing rule", err, peek)
 			return
 		}
 
@@ -103,13 +109,13 @@ func parseIR(tok *TokenRing) (rv IR, err error) {
 func parseRule(tok *TokenRing) (rv Rule, err error) {
 	rv.Selector, err = parseSelector(tok)
 	if err != nil {
-		err = parseError("Error parsing selector list", err)
+		err = parseError("Error parsing selector list", err, tok.Peek())
 		return
 	}
 
 	rv.Scope, err = parseScope(tok)
 	if err != nil {
-		err = parseError("Error parsing scope", err)
+		err = parseError("Error parsing scope", err, tok.Peek())
 		return
 	}
 	return
@@ -124,13 +130,13 @@ func parseSelector(tok *TokenRing) (rv Selector, err error) {
 		if c.Type == OperatorToken && c.Value == "{" {
 			tok.Rewind()
 			if len(rv) == 0 {
-				err = parseError("empty selector", nil)
+				err = parseError("empty selector", nil, c)
 			}
 			return
 		} else if c.Type == OperatorToken && c.Value == "}" {
 			tok.Rewind()
 			if len(rv) == 0 {
-				err = parseError("Unexpected '}'", nil)
+				err = parseError("Unexpected '}'", nil, c)
 			}
 			return
 		}
@@ -144,7 +150,7 @@ func parseScope(tok *TokenRing) (rv Scope, err error) {
 	peek := tok.Next()
 
 	if peek == nil || peek.Type != OperatorToken || peek.Value != "{" {
-		err = parseError("Expected: '{'", nil)
+		err = parseError("Expected: '{'", nil, peek)
 		tok.Rewind()
 		return
 	}
@@ -159,7 +165,7 @@ func parseScope(tok *TokenRing) (rv Scope, err error) {
 		} else {
 			rule, err = parseRule(tok)
 			if err != nil {
-				err = parseError("Error parsing scope", err)
+				err = parseError("Error parsing scope", err, peek)
 				return
 			}
 			rv.Subrules = append(rv.Subrules, rule)
@@ -174,7 +180,7 @@ func parseScope(tok *TokenRing) (rv Scope, err error) {
 	}
 
 	if peek == nil || peek.Type != OperatorToken || peek.Value != "}" {
-		err = parseError("Expected: '}'", nil)
+		err = parseError("Expected: '}'", nil, peek)
 		return
 	}
 	tok.Next()
@@ -191,12 +197,12 @@ func parseProperty(tok *TokenRing) (rv Property, err error) {
 		peek = tok.Next()
 	}
 	if peek == nil {
-		err = parseError("unexpected EOF", nil)
+		err = parseError("unexpected EOF", nil, peek)
 		tok.NRewind(b - 1)
 		return
 	}
 	if peek.Type != SymbolToken {
-		err = parseError("expected symbol", nil)
+		err = parseError("expected symbol", nil, peek)
 		tok.NRewind(b)
 		return
 	}
@@ -210,12 +216,12 @@ func parseProperty(tok *TokenRing) (rv Property, err error) {
 		peek = tok.Next()
 	}
 	if peek == nil {
-		err = parseError("unexpected EOF", nil)
+		err = parseError("unexpected EOF", nil, peek)
 		tok.NRewind(b - 1)
 		return
 	}
 	if peek.Type != OperatorToken || peek.Value != ":" {
-		err = parseError("expected ':'", nil)
+		err = parseError("expected ':'", nil, peek)
 		tok.NRewind(b)
 		return
 	}
@@ -223,7 +229,7 @@ func parseProperty(tok *TokenRing) (rv Property, err error) {
 	b += 1
 	peek = tok.Next()
 	if peek == nil {
-		err = parseError("unexpected EOF", nil)
+		err = parseError("unexpected EOF", nil, peek)
 		tok.NRewind(b - 1)
 		return
 	}

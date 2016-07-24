@@ -2,6 +2,7 @@ package lexer
 
 type runeNode struct {
 	r    rune
+	l, c int
 	next *runeNode
 }
 
@@ -13,8 +14,8 @@ func newRuneStack() runeStack {
 	return runeStack{}
 }
 
-func (s *runeStack) push(r rune) {
-	node := &runeNode{r: r}
+func (s *runeStack) push(r rune, l, c int) {
+	node := &runeNode{r: r, l: l, c: c}
 	if s.start == nil {
 		s.start = node
 	} else {
@@ -23,13 +24,13 @@ func (s *runeStack) push(r rune) {
 	}
 }
 
-func (s *runeStack) pop() rune {
+func (s *runeStack) pop() (rune, int, int) {
 	if s.start == nil {
-		return EOFRune
+		return EOFRune, 0, 0
 	} else {
 		n := s.start
 		s.start = n.next
-		return n.r
+		return n.r, n.l, n.c
 	}
 }
 
