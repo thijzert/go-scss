@@ -10,7 +10,7 @@ func main() {
 	{
 		color: rgb(0, 100, 0);
 		background-color: #000;
-		.bar
+		.bar .baz
 		{
 			color: lime;
 		}

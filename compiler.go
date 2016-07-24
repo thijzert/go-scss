@@ -27,14 +27,7 @@ func Compile(src string) (string, error) {
 func compileRule(rule Rule, previousRules, indent string) string {
 	rv := ""
 
-	previousRules += " "
-	for _, s := range rule.Selector {
-		if s.Type == WhitespaceToken {
-			previousRules += " "
-		} else {
-			previousRules += s.Value
-		}
-	}
+	previousRules += " " + rule.Selector.Evaluate()
 
 	rv += indent + previousRules + " {\n"
 	for _, p := range rule.Scope.Properties {

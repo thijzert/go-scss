@@ -40,7 +40,6 @@ func (p ParseError) String() string {
 	return rv
 }
 
-type Selector []*lexer.Token
 type Property struct {
 	Key, Value string
 }
@@ -120,36 +119,6 @@ func parseRule(tok *TokenRing) (rv Rule, err error) {
 		err = parseError("Error parsing scope", err, tok.Peek())
 		tok.Backtrack()
 		return
-	}
-	tok.Unmark()
-	return
-}
-
-func parseSelector(tok *TokenRing) (rv Selector, err error) {
-	tok.Mark()
-	c := tok.Ignore(WhitespaceToken)
-	for c != nil {
-		if c.Type == OperatorToken && c.Value == "{" {
-			tok.Rewind()
-			if len(rv) == 0 {
-				err = parseError("empty selector", nil, c)
-				tok.Backtrack()
-			} else {
-				tok.Unmark()
-			}
-			return
-		} else if c.Type == OperatorToken && c.Value == "}" {
-			tok.Rewind()
-			if len(rv) == 0 {
-				err = parseError("Unexpected '}'", nil, c)
-				tok.Backtrack()
-			} else {
-				tok.Unmark()
-			}
-			return
-		}
-		rv = append(rv, c)
-		c = tok.Next()
 	}
 	tok.Unmark()
 	return
