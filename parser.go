@@ -3,6 +3,7 @@ package scss
 import (
 	_ "github.com/pkg/errors"
 	"github.com/thijzert/go-scss/lexer"
+	"strings"
 )
 
 type ParseError struct {
@@ -20,6 +21,17 @@ func (p ParseError) Cause() error {
 
 func parseError(err string, cause error) error {
 	return ParseError{err, cause}
+}
+
+func (p ParseError) String() string {
+	if p.Previous != nil {
+		if perr, ok := p.Previous.(ParseError); ok {
+			return p.Message + "\n\t" + strings.Replace(perr.String(), "\n", "\n\t", -1)
+		} else {
+			return p.Message + "\n\t" + strings.Replace(p.Previous.Error(), "\n", "\n\t", -1)
+		}
+	}
+	return p.Message
 }
 
 type Selector []*lexer.Token

@@ -13,10 +13,15 @@ func main() {
 		.bar
 		{
 			color: lime;
-		}
+		)
 	}`
 
 	parsed, err := scss.Parse(src)
 	fmt.Printf("%+v\n", parsed)
-	fmt.Printf("%+v\n", err)
+
+	if perr, ok := err.(scss.ParseError); ok {
+		fmt.Printf("%s\n", perr.String())
+	} else {
+		fmt.Printf("%+v\n", err)
+	}
 }
