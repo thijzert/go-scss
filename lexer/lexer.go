@@ -107,6 +107,10 @@ func (l *L) Emit(t TokenType) {
 		Line:   l.line,
 		Column: l.column,
 	}
+	if l.rewind.start != nil {
+		tok.Line = l.rewind.start.l
+		tok.Column = l.rewind.start.c
+	}
 	l.tokens <- tok
 	l.start = l.position
 	l.rewind.clear()
