@@ -19,9 +19,17 @@ func main() {
 	parsed, err := scss.Parse(src)
 	fmt.Printf("%+v\n", parsed)
 
-	if perr, ok := err.(scss.ParseError); ok {
-		fmt.Printf("%s\n", perr.String())
-	} else {
+	if err != nil {
+		if perr, ok := err.(scss.ParseError); ok {
+			fmt.Printf("%s\n", perr.String())
+		} else {
+			fmt.Printf("%+v\n", err)
+		}
+	}
+	compiled, err := scss.Compile(src)
+	fmt.Printf("%s\n", compiled)
+
+	if err != nil {
 		fmt.Printf("%+v\n", err)
 	}
 }
