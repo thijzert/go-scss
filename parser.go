@@ -65,6 +65,7 @@ func Parse(src string) (rv IR, err error) {
 }
 
 func parseIR(tok *TokenRing) (rv IR, err error) {
+	tok.Mark()
 	rv.Rules = make([]Rule, 0)
 	peek := tok.Next()
 	for peek != nil && peek.Type == WhitespaceToken {
@@ -78,9 +79,11 @@ func parseIR(tok *TokenRing) (rv IR, err error) {
 			// TODO: handle @import, $macro, @mixin...
 			if peek.Value == "@" {
 				err = parseError("@-directives are not implemented", nil, peek)
+				tok.Backtrack()
 				return
 			} else if peek.Value == "$" {
 				err = parseError("Macros are not implemented", nil, peek)
+				tok.Backtrack()
 				return
 			}
 		}
@@ -89,6 +92,7 @@ func parseIR(tok *TokenRing) (rv IR, err error) {
 
 		if err != nil {
 			err = parseError("Error parsing rule", err, peek)
+			tok.Backtrack()
 			return
 		}
 
@@ -103,25 +107,31 @@ func parseIR(tok *TokenRing) (rv IR, err error) {
 		}
 	}
 
+	tok.Unmark()
 	return
 }
 
 func parseRule(tok *TokenRing) (rv Rule, err error) {
+	tok.Mark()
 	rv.Selector, err = parseSelector(tok)
 	if err != nil {
 		err = parseError("Error parsing selector list", err, tok.Peek())
+		tok.Backtrack()
 		return
 	}
 
 	rv.Scope, err = parseScope(tok)
 	if err != nil {
 		err = parseError("Error parsing scope", err, tok.Peek())
+		tok.Backtrack()
 		return
 	}
+	tok.Unmark()
 	return
 }
 
 func parseSelector(tok *TokenRing) (rv Selector, err error) {
+	tok.Mark()
 	c := tok.Next()
 	for c != nil && c.Type == WhitespaceToken {
 		c = tok.Next()
@@ -131,27 +141,35 @@ func parseSelector(tok *TokenRing) (rv Selector, err error) {
 			tok.Rewind()
 			if len(rv) == 0 {
 				err = parseError("empty selector", nil, c)
+				tok.Backtrack()
+			} else {
+				tok.Unmark()
 			}
 			return
 		} else if c.Type == OperatorToken && c.Value == "}" {
 			tok.Rewind()
 			if len(rv) == 0 {
 				err = parseError("Unexpected '}'", nil, c)
+				tok.Backtrack()
+			} else {
+				tok.Unmark()
 			}
 			return
 		}
 		rv = append(rv, c)
 		c = tok.Next()
 	}
+	tok.Unmark()
 	return
 }
 
 func parseScope(tok *TokenRing) (rv Scope, err error) {
-	peek := tok.Next()
+	tok.Mark()
 
+	peek := tok.Next()
 	if peek == nil || peek.Type != OperatorToken || peek.Value != "{" {
 		err = parseError("Expected: '{'", nil, peek)
-		tok.Rewind()
+		tok.Backtrack()
 		return
 	}
 	peek = tok.Next()
@@ -166,6 +184,7 @@ func parseScope(tok *TokenRing) (rv Scope, err error) {
 			rule, err = parseRule(tok)
 			if err != nil {
 				err = parseError("Error parsing scope", err, peek)
+				tok.Backtrack()
 				return
 			}
 			rv.Subrules = append(rv.Subrules, rule)
@@ -179,58 +198,56 @@ func parseScope(tok *TokenRing) (rv Scope, err error) {
 		}
 	}
 
+	peek = tok.Next()
 	if peek == nil || peek.Type != OperatorToken || peek.Value != "}" {
 		err = parseError("Expected: '}'", nil, peek)
+		tok.Backtrack()
 		return
 	}
-	tok.Next()
 
+	tok.Unmark()
 	return
 }
 
 func parseProperty(tok *TokenRing) (rv Property, err error) {
+	tok.Mark()
 
-	b := 1
 	peek := tok.Next()
 	for peek != nil && peek.Type == WhitespaceToken {
-		b += 1
 		peek = tok.Next()
 	}
 	if peek == nil {
 		err = parseError("unexpected EOF", nil, peek)
-		tok.NRewind(b - 1)
+		tok.Backtrack()
 		return
 	}
 	if peek.Type != SymbolToken {
 		err = parseError("expected symbol", nil, peek)
-		tok.NRewind(b)
+		tok.Backtrack()
 		return
 	}
 
 	rv.Key = peek.Value
 
-	b += 1
 	peek = tok.Next()
 	for peek != nil && peek.Type == WhitespaceToken {
-		b += 1
 		peek = tok.Next()
 	}
 	if peek == nil {
 		err = parseError("unexpected EOF", nil, peek)
-		tok.NRewind(b - 1)
+		tok.Backtrack()
 		return
 	}
 	if peek.Type != OperatorToken || peek.Value != ":" {
 		err = parseError("expected ':'", nil, peek)
-		tok.NRewind(b)
+		tok.Backtrack()
 		return
 	}
 
-	b += 1
 	peek = tok.Next()
 	if peek == nil {
 		err = parseError("unexpected EOF", nil, peek)
-		tok.NRewind(b - 1)
+		tok.Backtrack()
 		return
 	}
 
@@ -244,13 +261,14 @@ func parseProperty(tok *TokenRing) (rv Property, err error) {
 			if peek.Value == "}" {
 				tok.Rewind()
 			}
+			tok.Unmark()
 			return
 		} else {
 			rv.Value = rv.Value + peek.Value
 		}
-		b += 1
 		peek = tok.Next()
 	}
 
+	tok.Unmark()
 	return
 }
