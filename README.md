@@ -17,7 +17,7 @@ This will create FILE.css
 
 Known issues
 ------------
-It does not currently compile anything.
+go-scss currently only supports an embarrassingly tiny subset of SASS/SCSS.
 
 License
 -------
