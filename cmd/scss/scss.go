@@ -14,19 +14,22 @@ import (
 
 var (
 	act_compile = flag.Bool("compile", false, "Compile source files or directories")
+	act_version = flag.Bool("version", false, "Show version information")
 )
 
 func init() {
 	flag.Parse()
 
 	// TODO: implement other actions, e.g. "--clean", "--watch", etc.
-	if !*act_compile {
+	if !*act_compile && !*act_version {
 		*act_compile = true
 	}
 }
 
 func main() {
-	if *act_compile {
+	if *act_version {
+		fmt.Printf("go-scss Version %d.%d.%d.%d\n", scss.Version.Release, scss.Version.Breaking, scss.Version.Feature, scss.Version.Fix)
+	} else if *act_compile {
 		for _, a := range flag.Args() {
 			aa := strings.Split(a, ":")
 			source := aa[0]
