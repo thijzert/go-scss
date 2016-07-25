@@ -19,7 +19,7 @@ func Compile(src string) (string, error) {
 
 	rv := ""
 	for _, r := range parseTree.Rules {
-		rv += compileRule(r, "", "") + "\n"
+		rv += compileRule(r, "", "")
 	}
 	return rv, nil
 }
@@ -31,12 +31,12 @@ func compileRule(rule Rule, previousRules, indent string) string {
 
 	rv += indent + previousRules + " {\n"
 	for _, p := range rule.Scope.Properties {
-		rv += indent + "   " + p.Key + ":" + p.Value + ";\n"
+		rv += indent + "\t" + p.Key + ": " + p.Value + ";\n"
 	}
 	rv += indent + "}\n"
 
 	for _, sr := range rule.Scope.Subrules {
-		rv += compileRule(sr, previousRules, indent+"   ")
+		rv += compileRule(sr, previousRules, indent+"\t")
 	}
 	return rv
 }
