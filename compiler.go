@@ -2,7 +2,6 @@ package scss
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"strings"
 )
 
@@ -14,7 +13,7 @@ func Compile(src string) (string, error) {
 			errtext = perr.String()
 		}
 
-		return fmt.Sprintf("body:before { font-family: fixed; white-space: pre; content: \"%s\"; }", strings.Replace(strings.Replace(errtext, "\\", "\\\\", -1), "\"", "\\\"", -1)), errors.Wrap(err, "Parse error")
+		return fmt.Sprintf("body:before { font-family: fixed; white-space: pre; content: \"%s\"; }", strings.Replace(strings.Replace(errtext, "\\", "\\\\", -1), "\"", "\\\"", -1)), compileError("Parse error", err)
 	}
 
 	rv := ""
