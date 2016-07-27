@@ -42,11 +42,13 @@ func compileRule(rule Rule, prevSelector Selector, indent string) (string, error
 		return "", err
 	}
 
-	rv += indent + thisSelector.Evaluate() + " {\n"
-	for _, p := range rule.Scope.Properties {
-		rv += indent + "\t" + p.Key + ": " + p.Value + ";\n"
+	if len(rule.Scope.Properties) > 0 {
+		rv += indent + thisSelector.Evaluate() + " {\n"
+		for _, p := range rule.Scope.Properties {
+			rv += indent + "\t" + p.Key + ": " + p.Value + ";\n"
+		}
+		rv += indent + "}\n"
 	}
-	rv += indent + "}\n"
 
 	for _, sr := range rule.Scope.Subrules {
 		rr, err := compileRule(sr, thisSelector, indent+"\t")
