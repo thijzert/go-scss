@@ -1,5 +1,9 @@
 package scss
 
+import (
+	"fmt"
+)
+
 type selectorNodeType int
 
 const (
@@ -20,6 +24,11 @@ const (
 type Selector interface {
 	Type() selectorNodeType
 	Evaluate() string
+	Clone() Selector
+}
+
+type lefter interface {
+	Left() Selector
 }
 
 func parseSelector(tok *TokenRing) (rv Selector, err error) {
@@ -125,6 +134,9 @@ func (s *sImplicitAmp) Type() selectorNodeType {
 func (s *sImplicitAmp) Evaluate() string {
 	return ""
 }
+func (s *sImplicitAmp) Clone() Selector {
+	return &sImplicitAmp{}
+}
 
 type sTag struct {
 	TagName string
@@ -135,6 +147,9 @@ func (s *sTag) Type() selectorNodeType {
 }
 func (s *sTag) Evaluate() string {
 	return s.TagName
+}
+func (s *sTag) Clone() Selector {
+	return &sTag{s.TagName}
 }
 
 type sClass struct {
@@ -147,6 +162,9 @@ func (s *sClass) Type() selectorNodeType {
 func (s *sClass) Evaluate() string {
 	return "." + s.ClassName
 }
+func (s *sClass) Clone() Selector {
+	return &sClass{s.ClassName}
+}
 
 type sCompoundDescendant struct {
 	A, B Selector
@@ -157,4 +175,39 @@ func (s *sCompoundDescendant) Type() selectorNodeType {
 }
 func (s *sCompoundDescendant) Evaluate() string {
 	return s.A.Evaluate() + " " + s.B.Evaluate()
+}
+func (s *sCompoundDescendant) Clone() Selector {
+	return &sCompoundDescendant{s.A.Clone(), s.B.Clone()}
+}
+func (s *sCompoundDescendant) Left() Selector {
+	return s.A
+}
+
+// Compose two selectors into one
+func composeSelectors(top, bottom Selector) (Selector, error) {
+	if btm, ok := bottom.(lefter); ok {
+		btmleft := btm.Left()
+		if btmleft.Type() == stImplicitAmp {
+			if top == nil {
+				// This is a top-level selector.
+				// Remove implicit ampersand nodes from the selector
+				bbt, ok := bottom.(*sCompoundDescendant)
+				if ok {
+					return bbt.B.Clone(), nil
+				} else {
+					return bottom, compileError("Top-level selectors should be of the 'implicit descendant' type", nil)
+				}
+			}
+
+			rv := bottom.Clone()
+			if rrv, ok := rv.(*sCompoundDescendant); ok {
+				rrv.A = top.Clone()
+			} else {
+				return rv, compileError(fmt.Sprintf("Don't know how to compose type %d", rv.Type()), nil)
+			}
+			return rv, nil
+		}
+	}
+
+	return top, compileError("Not implemented either", nil)
 }

@@ -5,3 +5,6 @@
 	.foo .bar .baz {
 		color: lime;
 	}
+	.foo .quux {
+		color: green;
+	}
