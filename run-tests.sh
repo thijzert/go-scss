@@ -1,7 +1,7 @@
 #!/bin/sh
 
 
-go run cmd/scss/*.go  --compile test_vectors/source:test_vectors/observed
+go run cmd/scss/*.go  --compile test_vectors/source:test_vectors/observed || exit $?
 
 
 DIFF="$(which colordiff)"
@@ -14,7 +14,7 @@ fi
 if [ -x "$DIFF" ]
 then
 	echo
-	$DIFF --exclude '.*.swp' -ur test_vectors/expected test_vectors/observed
+	$DIFF --exclude '.*.swp' -ur test_vectors/expected test_vectors/observed || exit $?
 fi
 
 
