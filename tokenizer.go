@@ -16,6 +16,8 @@ func nullState(l *lexer.L) lexer.StateFunc {
 		return nil
 	} else if peek == ' ' || peek == '\t' || peek == '\n' || peek == '\r' {
 		return whitespaceState
+	} else if peek == '/' {
+		return commentState
 	} else if isOperator(peek) {
 		l.Next()
 		l.Emit(OperatorToken)
@@ -87,4 +89,34 @@ func symbolState(l *lexer.L) lexer.StateFunc {
 			return nullState
 		}
 	}
+}
+
+func commentState(l *lexer.L) lexer.StateFunc {
+	peek := l.Next()
+	peek = l.Peek()
+	if peek == '/' {
+		// Line comment
+		for peek != lexer.EOFRune && peek != '\n' {
+			peek = l.Next()
+		}
+		l.Ignore()
+	} else if peek == '*' {
+		// Block comment
+		for {
+			for peek != lexer.EOFRune && peek != '*' {
+				peek = l.Next()
+			}
+			if peek != lexer.EOFRune {
+				peek = l.Next()
+				if peek == lexer.EOFRune || peek == '/' {
+					l.Ignore()
+					break
+				}
+			}
+		}
+	} else {
+		// Well that's weird. Let's treat the slash as an operator.
+		l.Emit(OperatorToken)
+	}
+	return nullState
 }

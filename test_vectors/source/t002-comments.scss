@@ -1,0 +1,20 @@
+/*
+ * In spite of what you may think of CSS, comments are an integral part of any
+ * development process, as they allow one to document the 'why' as well as the
+ * 'what' or 'how'.
+ */
+.foo
+{
+	// However, not all comments are created equally.
+	// Developers must take care to write *good* comments. There's only so much
+	// literary genius that you successor (or, future you) will tolerate in
+	// lieu of actually explaining something.
+
+	.bar
+	{
+		/* There's recently been (it's July 2016 now) an epic Torvalds meltdown on comment styles */
+
+		color: blue;
+		// I've taken care to test both /* block */ and // line comments.
+	}
+}
