@@ -2,7 +2,11 @@ go-scss is an experiment in writing a compiler in Go. It compiles SASS/SCSS into
 
 Building
 --------
-Simply run:
+go-scss has few external dependencies, partly by design, partly because *this is the manner in which I roll*. To quickly grab the libraries you do need, run:
+```
+go get -u github.com/thijzert/go-termcolours
+```
+After that, simply run:
 ```
 go build -o scss cmd/scss/*.go
 ```
