@@ -61,6 +61,15 @@ func realParseSelector(tok *TokenRing, left Selector) (rv Selector, err error) {
 			committed = true
 			tok.Next()
 			compType = stCompoundNextSibling
+		} else if peek.Value == "," {
+			if left.Type() == stImplicitAmp {
+				err = parseError("unexpected ','", nil, peek)
+				tok.Backtrack()
+				return
+			}
+			committed = true
+			tok.Next()
+			compType = stCompoundEither
 		}
 	}
 
@@ -83,7 +92,30 @@ func realParseSelector(tok *TokenRing, left Selector) (rv Selector, err error) {
 	}
 	err = nil
 
-	rv = &sCompound{compType, left, right}
+	if compType != stCompoundEither {
+		if rr, ok := right.(*sEither); ok {
+			rrv := &sEither{make([]Selector, len(rr.Terms))}
+			for i, t := range rr.Terms {
+				rrv.Terms[i] = &sCompound{compType, left.Clone(), t}
+			}
+			rv = rrv
+		} else {
+			rv = &sCompound{compType, left, right}
+		}
+	} else {
+		rrv := &sEither{}
+		if rr, ok := right.(*sEither); ok {
+			// [.a, [.b, .c]] -> [.a, .b, .c]
+			rrv.Terms = make([]Selector, len(rr.Terms)+1)
+			rrv.Terms[0] = left
+			copy(rrv.Terms[1:], rr.Terms)
+		} else {
+			rrv.Terms = make([]Selector, 2)
+			rrv.Terms[0] = left
+			rrv.Terms[1] = right
+		}
+		rv = rrv
+	}
 
 	if err == nil {
 		tok.Unmark()
@@ -191,6 +223,31 @@ func (s *sCompound) Left() Selector {
 	return s.A
 }
 
+type sEither struct {
+	Terms []Selector
+}
+
+func (s *sEither) Type() selectorNodeType {
+	return stCompoundEither
+}
+func (s *sEither) Evaluate() string {
+	rv := ""
+	for i, ss := range s.Terms {
+		if i > 0 {
+			rv += ","
+		}
+		rv += ss.Evaluate()
+	}
+	return rv
+}
+func (s *sEither) Clone() Selector {
+	rv := &sEither{make([]Selector, len(s.Terms))}
+	for i, ss := range s.Terms {
+		rv.Terms[i] = ss.Clone()
+	}
+	return rv
+}
+
 // Compose two selectors into one
 func composeSelectors(top, bottom Selector) (Selector, error) {
 	if btm, ok := bottom.(lefter); ok {
@@ -215,6 +272,42 @@ func composeSelectors(top, bottom Selector) (Selector, error) {
 			}
 			return rv, nil
 		}
+	} else if tcmp, ok := top.(*sEither); ok {
+		var err error
+		if bcmp, ok := bottom.(*sEither); ok {
+			lb := len(bcmp.Terms)
+			// [[.a, .b] [.c, .d]] -> [[.a .c],[.a .d],[.b .c],[.b .d]]
+			rv := &sEither{make([]Selector, lb*len(tcmp.Terms))}
+			for i, t := range tcmp.Terms {
+				for j, b := range bcmp.Terms {
+					rv.Terms[lb*i+j], err = composeSelectors(t, b)
+					if err != nil {
+						return nil, err
+					}
+				}
+			}
+			return rv, nil
+		} else {
+			// [[.a, .b] .c] -> [[.a .c],[.b .c]]
+			rv := &sEither{make([]Selector, len(tcmp.Terms))}
+			for i, t := range tcmp.Terms {
+				rv.Terms[i], err = composeSelectors(t, bottom)
+				if err != nil {
+					return nil, err
+				}
+			}
+			return rv, nil
+		}
+	} else if bcmp, ok := bottom.(*sEither); ok {
+		var err error
+		rv := &sEither{make([]Selector, len(bcmp.Terms))}
+		for i, b := range bcmp.Terms {
+			rv.Terms[i], err = composeSelectors(top, b)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return rv, nil
 	}
 
 	return top, compileError("Not implemented either", nil)
