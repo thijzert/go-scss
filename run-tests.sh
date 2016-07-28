@@ -1,6 +1,6 @@
 #!/bin/sh
 
-
+rm -f test_vectors/observed/*.css
 go run cmd/scss/*.go  --compile test_vectors/source:test_vectors/observed || exit $?
 
 
