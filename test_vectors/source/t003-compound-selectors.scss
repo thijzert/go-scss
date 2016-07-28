@@ -1,0 +1,32 @@
+.foo
+{
+	span.baz
+	{
+		color: #232323;
+	}
+
+	p + div
+	{
+		background-color: #d9d9d9;
+	}
+
+	.dude > .car
+	{
+		display: none;
+	}
+}
+
+.bar
+{
+	// Logically, this line would say &.baz.
+	// I'll test the explicit ampersand in another file.
+	+ div
+	{
+		background-color: #d9d9d9;
+	}
+
+	> .car
+	{
+		display: none;
+	}
+}

@@ -83,11 +83,7 @@ func realParseSelector(tok *TokenRing, left Selector) (rv Selector, err error) {
 	}
 	err = nil
 
-	if compType == stCompoundDescendant {
-		rv = &sCompoundDescendant{left, right}
-	} else {
-		err = parseError("unknown compound type", nil, peek)
-	}
+	rv = &sCompound{compType, left, right}
 
 	if err == nil {
 		tok.Unmark()
@@ -166,20 +162,32 @@ func (s *sClass) Clone() Selector {
 	return &sClass{s.ClassName}
 }
 
-type sCompoundDescendant struct {
-	A, B Selector
+type sCompound struct {
+	CompoundType selectorNodeType
+	A, B         Selector
 }
 
-func (s *sCompoundDescendant) Type() selectorNodeType {
-	return stCompoundDescendant
+func (s *sCompound) Type() selectorNodeType {
+	return s.CompoundType
 }
-func (s *sCompoundDescendant) Evaluate() string {
-	return s.A.Evaluate() + " " + s.B.Evaluate()
+func (s *sCompound) Evaluate() string {
+	if s.CompoundType == stCompoundDirectDescendant {
+		return s.A.Evaluate() + ">" + s.B.Evaluate()
+	} else if s.CompoundType == stCompoundDescendant {
+		return s.A.Evaluate() + " " + s.B.Evaluate()
+	} else if s.CompoundType == stCompoundNextSibling {
+		return s.A.Evaluate() + "+" + s.B.Evaluate()
+	} else if s.CompoundType == stCompoundBoth {
+		return s.A.Evaluate() + s.B.Evaluate()
+	} else {
+		// FIXME: Detect this error in an earlier stage, and pass it through appropriate channels
+		return s.A.Evaluate() + "?" + s.B.Evaluate()
+	}
 }
-func (s *sCompoundDescendant) Clone() Selector {
-	return &sCompoundDescendant{s.A.Clone(), s.B.Clone()}
+func (s *sCompound) Clone() Selector {
+	return &sCompound{s.CompoundType, s.A.Clone(), s.B.Clone()}
 }
-func (s *sCompoundDescendant) Left() Selector {
+func (s *sCompound) Left() Selector {
 	return s.A
 }
 
@@ -191,7 +199,7 @@ func composeSelectors(top, bottom Selector) (Selector, error) {
 			if top == nil {
 				// This is a top-level selector.
 				// Remove implicit ampersand nodes from the selector
-				bbt, ok := bottom.(*sCompoundDescendant)
+				bbt, ok := bottom.(*sCompound)
 				if ok {
 					return bbt.B.Clone(), nil
 				} else {
@@ -200,7 +208,7 @@ func composeSelectors(top, bottom Selector) (Selector, error) {
 			}
 
 			rv := bottom.Clone()
-			if rrv, ok := rv.(*sCompoundDescendant); ok {
+			if rrv, ok := rv.(*sCompound); ok {
 				rrv.A = top.Clone()
 			} else {
 				return rv, compileError(fmt.Sprintf("Don't know how to compose type %d", rv.Type()), nil)
