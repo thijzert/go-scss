@@ -1,3 +1,9 @@
 		.foo .baz span,.foo .baz div,.foo .baz p,.foo .quux span,.foo .quux div,.foo .quux p,.bar .baz span,.bar .baz div,.bar .baz p,.bar .quux span,.bar .quux div,.bar .quux p {
 			display: none;
 		}
+			.foo h3 h5 .baz,.foo h3 h5 .quux,.bar h3 h5 .baz,.bar h3 h5 .quux {
+				display: table-cell;
+			}
+		body .foo .baz,body .bar .baz {
+			background-color: lime;
+		}

@@ -250,29 +250,7 @@ func (s *sEither) Clone() Selector {
 
 // Compose two selectors into one
 func composeSelectors(top, bottom Selector) (Selector, error) {
-	if btm, ok := bottom.(lefter); ok {
-		btmleft := btm.Left()
-		if btmleft.Type() == stImplicitAmp {
-			if top == nil {
-				// This is a top-level selector.
-				// Remove implicit ampersand nodes from the selector
-				bbt, ok := bottom.(*sCompound)
-				if ok {
-					return bbt.B.Clone(), nil
-				} else {
-					return bottom, compileError("Top-level selectors should be of the 'implicit descendant' type", nil)
-				}
-			}
-
-			rv := bottom.Clone()
-			if rrv, ok := rv.(*sCompound); ok {
-				rrv.A = top.Clone()
-			} else {
-				return rv, compileError(fmt.Sprintf("Don't know how to compose type %d", rv.Type()), nil)
-			}
-			return rv, nil
-		}
-	} else if tcmp, ok := top.(*sEither); ok {
+	if tcmp, ok := top.(*sEither); ok {
 		var err error
 		if bcmp, ok := bottom.(*sEither); ok {
 			lb := len(bcmp.Terms)
@@ -308,6 +286,28 @@ func composeSelectors(top, bottom Selector) (Selector, error) {
 			}
 		}
 		return rv, nil
+	} else if btm, ok := bottom.(lefter); ok {
+		btmleft := btm.Left()
+		if btmleft.Type() == stImplicitAmp {
+			if top == nil {
+				// This is a top-level selector.
+				// Remove implicit ampersand nodes from the selector
+				bbt, ok := bottom.(*sCompound)
+				if ok {
+					return bbt.B.Clone(), nil
+				} else {
+					return bottom, compileError("Top-level selectors should be of the 'implicit descendant' type", nil)
+				}
+			}
+
+			rv := bottom.Clone()
+			if rrv, ok := rv.(*sCompound); ok {
+				rrv.A = top.Clone()
+			} else {
+				return rv, compileError(fmt.Sprintf("Don't know how to compose type %d", rv.Type()), nil)
+			}
+			return rv, nil
+		}
 	}
 
 	return top, compileError("Not implemented either", nil)

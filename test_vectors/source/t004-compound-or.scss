@@ -7,4 +7,26 @@
 			display: none;
 		}
 	}
+
+	h3
+	{
+		h5
+		{
+			.baz, .quux
+			{
+				display: table-cell;
+			}
+		}
+	}
+}
+
+body
+{
+	.foo, .bar
+	{
+		.baz
+		{
+			background-color: lime;
+		}
+	}
 }
