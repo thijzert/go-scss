@@ -14,6 +14,7 @@ const (
 	stCompoundDescendant
 	stCompoundDirectDescendant
 	stCompoundNextSibling
+	stID
 	stTag
 	stClass
 	stPseudoclass
@@ -134,13 +135,25 @@ func parseSimpleSelector(tok *TokenRing) (rv Selector, err error) {
 		// FIXME: Does such a list exist?
 		rv = &sTag{peek.Value}
 		tok.Unmark()
-	} else if peek.Type == OperatorToken && peek.Value == "." {
-		// Class!
-		peek = tok.Next()
-		if peek == nil || peek.Type != SymbolToken {
-			err = parseError("Expected symbol", nil, peek)
+	} else if peek.Type == OperatorToken {
+		if peek.Value == "." {
+			// Class!
+			peek = tok.Next()
+			if peek == nil || peek.Type != SymbolToken {
+				err = parseError("Expected symbol", nil, peek)
+			} else {
+				rv = &sClass{peek.Value}
+			}
+		} else if peek.Value == "#" {
+			// ID
+			peek = tok.Next()
+			if peek == nil || peek.Type != SymbolToken {
+				err = parseError("Expected symbol", nil, peek)
+			} else {
+				rv = &sID{peek.Value}
+			}
 		} else {
-			rv = &sClass{peek.Value}
+			err = parseError("unexpected operator '"+peek.Value+"'", nil, peek)
 		}
 	} else {
 		err = parseError("expected symbol or operator", nil, peek)
@@ -164,6 +177,20 @@ func (s *sImplicitAmp) Evaluate() string {
 }
 func (s *sImplicitAmp) Clone() Selector {
 	return &sImplicitAmp{}
+}
+
+type sID struct {
+	ID string
+}
+
+func (s *sID) Type() selectorNodeType {
+	return stID
+}
+func (s *sID) Evaluate() string {
+	return s.ID
+}
+func (s *sID) Clone() Selector {
+	return &sID{s.ID}
 }
 
 type sTag struct {

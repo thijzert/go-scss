@@ -13,3 +13,13 @@
 		color: green;
 	}
 }
+
+#one
+{
+	color: blue;
+
+	.two .three
+	{
+		display: none;
+	}
+}

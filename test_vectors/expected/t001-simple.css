@@ -8,3 +8,9 @@
 	.foo .quux {
 		color: green;
 	}
+#one {
+	color: blue;
+}
+	#one .two .three {
+		display: none;
+	}
