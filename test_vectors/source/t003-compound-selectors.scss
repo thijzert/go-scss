@@ -10,6 +10,11 @@
 		background-color: #d9d9d9;
 	}
 
+	input[name=password]
+	{
+		font-size: 200px;
+	}
+
 	.dude > .car
 	{
 		display: none;
@@ -28,5 +33,10 @@
 	> .car
 	{
 		display: none;
+	}
+
+	[href^="https://"]
+	{
+		background-color: yellow;
 	}
 }

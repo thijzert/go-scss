@@ -165,6 +165,36 @@ func parseSimpleSelector(tok *TokenRing) (rv Selector, err error) {
 				}
 				rv = &sPseudoclass{peek.Value}
 			}
+		} else if peek.Value == "[" {
+			// Attribute selector
+			peek = tok.Next()
+			if peek == nil || peek.Type != SymbolToken {
+				err = parseError("[ Expected symbol", nil, peek)
+			} else {
+				rrv := &sAttribute{peek.Value, "", ""}
+				peek = tok.Ignore(WhitespaceToken)
+				if peek.Type != OperatorToken {
+					err = parseError("[ Expected operator", nil, peek)
+				} else {
+					for peek.Type == OperatorToken {
+						rrv.Operator += peek.Value
+						peek = tok.Next()
+					}
+					tok.Rewind()
+					peek = tok.Ignore(WhitespaceToken)
+					if peek == nil || (peek.Type != SymbolToken && peek.Type != StringToken) {
+						err = parseError("[ Expected: string or symbol; got '"+peek.Value+"'", nil, peek)
+					} else {
+						rrv.Value = peek.Value
+						peek = tok.Ignore(WhitespaceToken)
+						if peek == nil || peek.Type != OperatorToken || peek.Value != "]" {
+							err = parseError("[ Expected: ']'", nil, peek)
+						} else {
+							rv = rrv
+						}
+					}
+				}
+			}
 		} else {
 			err = parseError("unexpected operator '"+peek.Value+"'", nil, peek)
 		}
@@ -246,6 +276,22 @@ func (s *sPseudoclass) Evaluate() string {
 }
 func (s *sPseudoclass) Clone() Selector {
 	return &sPseudoclass{s.Pseudoclass}
+}
+
+type sAttribute struct {
+	AttributeName string
+	Operator      string
+	Value         string
+}
+
+func (s *sAttribute) Type() selectorNodeType {
+	return stAttribute
+}
+func (s *sAttribute) Evaluate() string {
+	return "[" + s.AttributeName + s.Operator + s.Value + "]"
+}
+func (s *sAttribute) Clone() Selector {
+	return &sAttribute{s.AttributeName, s.Operator, s.Value}
 }
 
 type sCompound struct {

@@ -8,6 +8,7 @@ const (
 	WhitespaceToken lexer.TokenType = iota
 	OperatorToken
 	SymbolToken
+	StringToken
 )
 
 func nullState(l *lexer.L) lexer.StateFunc {
@@ -18,6 +19,8 @@ func nullState(l *lexer.L) lexer.StateFunc {
 		return whitespaceState
 	} else if peek == '/' {
 		return commentState
+	} else if peek == '"' {
+		return stringState
 	} else if isOperator(peek) {
 		l.Next()
 		l.Emit(OperatorToken)
@@ -54,6 +57,10 @@ func isOperator(r rune) bool {
 		return true
 	} else if r == ')' {
 		return true
+	} else if r == '[' {
+		return true
+	} else if r == ']' {
+		return true
 	} else if r == ':' {
 		return true
 	} else if r == ';' {
@@ -61,6 +68,10 @@ func isOperator(r rune) bool {
 	} else if r == '\'' {
 		return true
 	} else if r == '"' {
+		return true
+	} else if r == '^' {
+		return true
+	} else if r == '=' {
 		return true
 	} else if r == ',' {
 		return true
@@ -118,5 +129,21 @@ func commentState(l *lexer.L) lexer.StateFunc {
 		// Well that's weird. Let's treat the slash as an operator.
 		l.Emit(OperatorToken)
 	}
+	return nullState
+}
+
+func stringState(l *lexer.L) lexer.StateFunc {
+	peek := l.Next()
+	if peek != '"' {
+		l.Rewind()
+		return nullState
+	}
+	nope := false
+	peek = l.Next()
+	for peek != '"' || nope {
+		peek = l.Next()
+		nope = (peek == '\\')
+	}
+	l.Emit(StringToken)
 	return nullState
 }
