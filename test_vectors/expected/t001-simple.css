@@ -14,3 +14,6 @@
 	#one .two .three {
 		display: none;
 	}
+	#one :first-child {
+		background-color: white;
+	}

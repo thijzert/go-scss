@@ -152,6 +152,19 @@ func parseSimpleSelector(tok *TokenRing) (rv Selector, err error) {
 			} else {
 				rv = &sID{peek.Value}
 			}
+		} else if peek.Value == ":" {
+			// Either a function class or a CSS2.1 pseudoclass
+			peek = tok.Next()
+			if peek == nil || peek.Type != SymbolToken {
+				err = parseError("Expected symbol", nil, peek)
+			} else {
+				pp := tok.Peek()
+				if pp != nil && pp.Type == SymbolToken && pp.Value == "(" {
+					// TODO: "function class"
+					err = parseError("Function classes (e.g. \":"+peek.Value+"(...)\" are not implemented", nil, peek)
+				}
+				rv = &sPseudoclass{peek.Value}
+			}
 		} else {
 			err = parseError("unexpected operator '"+peek.Value+"'", nil, peek)
 		}
@@ -219,6 +232,20 @@ func (s *sClass) Evaluate() string {
 }
 func (s *sClass) Clone() Selector {
 	return &sClass{s.ClassName}
+}
+
+type sPseudoclass struct {
+	Pseudoclass string
+}
+
+func (s *sPseudoclass) Type() selectorNodeType {
+	return stPseudoclass
+}
+func (s *sPseudoclass) Evaluate() string {
+	return ":" + s.Pseudoclass
+}
+func (s *sPseudoclass) Clone() Selector {
+	return &sPseudoclass{s.Pseudoclass}
 }
 
 type sCompound struct {
