@@ -26,9 +26,9 @@ func Compile(src string) (string, error) {
 
 func formatErrorCSS(err error) string {
 	errtext := err.Error()
-	if perr, ok := err.(*CompileError); ok {
+	if perr, ok := err.(CompileError); ok {
 		errtext = perr.String()
-	} else if perr, ok := err.(*ParseError); ok {
+	} else if perr, ok := err.(ParseError); ok {
 		errtext = perr.String()
 	}
 	return fmt.Sprintf("body:before { font-family: fixed; white-space: pre; content: \"%s\"; }", strings.Replace(strings.Replace(errtext, "\\", "\\\\", -1), "\"", "\\\"", -1))
