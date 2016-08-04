@@ -1,0 +1,10 @@
+.foo {
+	cursor: pointer;
+	text-decoration: none;
+}
+	.foo:hover {
+		text-decoration: underline;
+	}
+	body.bar .foo {
+		display: none;
+	}

@@ -7,7 +7,8 @@ import (
 type selectorNodeType int
 
 const (
-	stImplicitAmp selectorNodeType = iota
+	stNil selectorNodeType = iota
+	stImplicitAmp
 	stExplicitAmp
 	stCompoundBoth
 	stCompoundEither
@@ -22,6 +23,40 @@ const (
 	stAttribute
 )
 
+func (t selectorNodeType) String() string {
+	if t == stNil {
+		return "<nil>"
+	} else if t == stImplicitAmp {
+		return "ImplicitAmp"
+	} else if t == stExplicitAmp {
+		return "ExplicitAmp"
+	} else if t == stCompoundBoth {
+		return "CompoundBoth"
+	} else if t == stCompoundEither {
+		return "CompoundEither"
+	} else if t == stCompoundDescendant {
+		return "CompoundDescendant"
+	} else if t == stCompoundDirectDescendant {
+		return "CompoundDirectDescendant"
+	} else if t == stCompoundNextSibling {
+		return "CompoundNextSibling"
+	} else if t == stID {
+		return "ID"
+	} else if t == stTag {
+		return "Tag"
+	} else if t == stClass {
+		return "Class"
+	} else if t == stPseudoclass {
+		return "Pseudoclass"
+	} else if t == stFunctionClass {
+		return "FunctionClass"
+	} else if t == stAttribute {
+		return "Attribute"
+	} else {
+		return fmt.Sprintf("Unknown type %d")
+	}
+}
+
 type Selector interface {
 	Type() selectorNodeType
 	Evaluate() string
@@ -33,13 +68,15 @@ type lefter interface {
 }
 
 func parseSelector(tok *TokenRing) (rv Selector, err error) {
-	return realParseSelector(tok, &sImplicitAmp{})
+	rv, _, err = realParseSelector(tok, &sAmpersand{false})
+	return
 }
 
-func realParseSelector(tok *TokenRing, left Selector) (rv Selector, err error) {
+func realParseSelector(tok *TokenRing, left Selector) (rv Selector, explicitAmp bool, err error) {
 	tok.Mark()
 	peek := tok.Peek()
 	whitespaceFound := peek != nil && peek.Type == WhitespaceToken
+	explicitAmp = false
 
 	committed := false
 	compType := stCompoundDescendant
@@ -82,12 +119,17 @@ func realParseSelector(tok *TokenRing, left Selector) (rv Selector, err error) {
 			tok.Backtrack()
 			return
 		} else {
-			return left, nil
+			return left, explicitAmp, nil
 		}
+	}
+	if right.Type() == stExplicitAmp {
+		explicitAmp = true
 	}
 
 	var farright Selector
-	farright, err = realParseSelector(tok, right)
+	var amp bool
+	farright, amp, err = realParseSelector(tok, right)
+	explicitAmp = amp || explicitAmp
 	if err == nil {
 		right = farright
 	}
@@ -100,6 +142,9 @@ func realParseSelector(tok *TokenRing, left Selector) (rv Selector, err error) {
 				rrv.Terms[i] = &sCompound{compType, left.Clone(), t}
 			}
 			rv = rrv
+		} else if left.Type() == stImplicitAmp && explicitAmp {
+			// No need for an implied amp node; we have one right here.
+			rv = right
 		} else {
 			rv = &sCompound{compType, left, right}
 		}
@@ -195,6 +240,8 @@ func parseSimpleSelector(tok *TokenRing) (rv Selector, err error) {
 					}
 				}
 			}
+		} else if peek.Value == "&" {
+			rv = &sAmpersand{true}
 		} else {
 			err = parseError("unexpected operator '"+peek.Value+"'", nil, peek)
 		}
@@ -210,16 +257,24 @@ func parseSimpleSelector(tok *TokenRing) (rv Selector, err error) {
 	return
 }
 
-type sImplicitAmp struct{}
+type sAmpersand struct {
+	Explicit bool
+}
 
-func (s *sImplicitAmp) Type() selectorNodeType {
+func (s *sAmpersand) Type() selectorNodeType {
+	if s.Explicit {
+		return stExplicitAmp
+	}
 	return stImplicitAmp
 }
-func (s *sImplicitAmp) Evaluate() string {
-	return ""
+func (s *sAmpersand) Evaluate() string {
+	if s.Explicit {
+		return "?!?"
+	}
+	return "?"
 }
-func (s *sImplicitAmp) Clone() Selector {
-	return &sImplicitAmp{}
+func (s *sAmpersand) Clone() Selector {
+	return &sAmpersand{s.Explicit}
 }
 
 type sID struct {
@@ -350,7 +405,17 @@ func (s *sEither) Clone() Selector {
 
 // Compose two selectors into one
 func composeSelectors(top, bottom Selector) (Selector, error) {
-	if tcmp, ok := top.(*sEither); ok {
+	if bottom.Type() == stExplicitAmp {
+		if top == nil {
+			return bottom, compileError("Empty selector: composing <nil> and &", nil)
+		}
+		return top.Clone(), nil
+	} else if top != nil && top.Type() == stExplicitAmp {
+		if bottom == nil {
+			return top, compileError("Empty selector: composing <nil> and &", nil)
+		}
+		return bottom.Clone(), nil
+	} else if tcmp, ok := top.(*sEither); ok {
 		var err error
 		if bcmp, ok := bottom.(*sEither); ok {
 			lb := len(bcmp.Terms)
@@ -386,29 +451,42 @@ func composeSelectors(top, bottom Selector) (Selector, error) {
 			}
 		}
 		return rv, nil
-	} else if btm, ok := bottom.(lefter); ok {
-		btmleft := btm.Left()
-		if btmleft.Type() == stImplicitAmp {
-			if top == nil {
-				// This is a top-level selector.
-				// Remove implicit ampersand nodes from the selector
-				bbt, ok := bottom.(*sCompound)
-				if ok {
-					return bbt.B.Clone(), nil
-				} else {
-					return bottom, compileError("Top-level selectors should be of the 'implicit descendant' type", nil)
-				}
-			}
+	}
 
-			rv := bottom.Clone()
-			if rrv, ok := rv.(*sCompound); ok {
-				rrv.A = top.Clone()
-			} else {
-				return rv, compileError(fmt.Sprintf("Don't know how to compose type %d", rv.Type()), nil)
-			}
-			return rv, nil
+	return applyAmpersand(top, bottom)
+}
+
+func applyAmpersand(amp, into Selector) (Selector, error) {
+	icmp, icmpOK := into.(*sCompound)
+
+	if amp == nil {
+		// This is a top-level selector.
+		// Remove implicit ampersand nodes from the selector
+
+		if icmpOK && into.Type() == stCompoundDescendant {
+			return icmp.B.Clone(), nil
+		} else {
+			return nil, compileError("Top-level selectors should be of the 'implicit descendant' type", nil)
 		}
 	}
 
-	return top, compileError("Not implemented either", nil)
+	itype := into.Type()
+	if itype == stImplicitAmp || itype == stExplicitAmp {
+		return amp.Clone(), nil
+	}
+	if icmpOK {
+		ca, ea := applyAmpersand(amp, icmp.A)
+		cb, eb := applyAmpersand(amp, icmp.B)
+
+		if ea != nil {
+			return nil, compileError(fmt.Sprintf("Can't apply ampersand to type \"%s\" somehow", icmp.A.Type()), ea)
+		}
+		if eb != nil {
+			return nil, compileError(fmt.Sprintf("Can't apply ampersand to type \"%s\" somehow", icmp.B.Type()), eb)
+		}
+
+		return &sCompound{icmp.Type(), ca, cb}, nil
+	}
+
+	return into.Clone(), nil
 }

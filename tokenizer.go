@@ -75,6 +75,10 @@ func isOperator(r rune) bool {
 		return true
 	} else if r == ',' {
 		return true
+	} else if r == '*' {
+		return true
+	} else if r == '&' {
+		return true
 	} else {
 		return false
 	}
