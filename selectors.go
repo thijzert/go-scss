@@ -15,6 +15,7 @@ const (
 	stCompoundDescendant
 	stCompoundDirectDescendant
 	stCompoundNextSibling
+	stStar
 	stID
 	stTag
 	stClass
@@ -240,6 +241,8 @@ func parseSimpleSelector(tok *TokenRing) (rv Selector, err error) {
 					}
 				}
 			}
+		} else if peek.Value == "*" {
+			rv = &sStar{}
 		} else if peek.Value == "&" {
 			rv = &sAmpersand{true}
 		} else {
@@ -275,6 +278,18 @@ func (s *sAmpersand) Evaluate() string {
 }
 func (s *sAmpersand) Clone() Selector {
 	return &sAmpersand{s.Explicit}
+}
+
+type sStar struct{}
+
+func (s *sStar) Type() selectorNodeType {
+	return stStar
+}
+func (s *sStar) Evaluate() string {
+	return "*"
+}
+func (s *sStar) Clone() Selector {
+	return &sStar{}
 }
 
 type sID struct {

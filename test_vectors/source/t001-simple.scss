@@ -7,6 +7,11 @@
 	.bar .baz
 	{
 		color: lime;
+
+		*
+		{
+			cursor: pointer;
+		}
 	}
 	.quux
 	{
@@ -26,5 +31,10 @@
 	:first-child
 	{
 		background-color: white;
+
+		*
+		{
+			vertical-align: top;
+		}
 	}
 }

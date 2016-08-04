@@ -5,6 +5,9 @@
 	.foo .bar .baz {
 		color: lime;
 	}
+		.foo .bar .baz * {
+			cursor: pointer;
+		}
 	.foo .quux {
 		color: green;
 	}
@@ -17,3 +20,6 @@
 	#one :first-child {
 		background-color: white;
 	}
+		#one :first-child * {
+			vertical-align: top;
+		}
